@@ -1249,7 +1249,13 @@
         revealElements.forEach(el => revealObserver.observe(el));
 
         // Form Handler - Formspree handles submission automatically
-        // Users will see a Formspree confirmation page after submitting
+        // Reset form fields immediately after submission so they don't stay filled
+        document.querySelector('form[action*="formspree"]').addEventListener('submit', function() {
+            const form = this;
+            setTimeout(function() {
+                form.reset();
+            }, 50);
+        });
 
         // Mobile Menu Toggle
         function toggleMenu() {
