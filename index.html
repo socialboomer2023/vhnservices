@@ -667,6 +667,7 @@
         }
 
         .contact-form {
+            position: relative;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 24px;
@@ -735,6 +736,64 @@
         .submit-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px var(--accent-glow);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Form Success Overlay */
+        .form-success {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 34, 64, 0.95);
+            border-radius: 24px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2.5rem;
+            z-index: 10;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .form-success.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .success-content {
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .success-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--accent), var(--gradient-2));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin: 0 auto 1rem;
+            box-shadow: 0 10px 30px var(--accent-glow);
+        }
+
+        .form-success h4 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .form-success p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
         }
 
         /* Footer */
@@ -1126,6 +1185,15 @@
                     </div>
                     <button type="submit" class="submit-btn">Send Message →</button>
                 </form>
+
+                <!-- Success Overlay -->
+                <div id="form-success" class="form-success">
+                    <div class="success-content">
+                        <div class="success-icon">✓</div>
+                        <h4>Message Sent!</h4>
+                        <p>Thank you for reaching out. We'll get back to you soon.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
@@ -1242,13 +1310,52 @@
 
         revealElements.forEach(el => revealObserver.observe(el));
 
-        // Form Handler - Formspree handles submission automatically
-        // Reset form fields immediately after submission so they don't stay filled
-        document.querySelector('form[action*="formspree"]').addEventListener('submit', function() {
-            const form = this;
-            setTimeout(function() {
-                form.reset();
-            }, 50);
+        // Form Handler - AJAX submission to Formspree (no page redirect)
+        const contactForm = document.querySelector('form[action*="formspree"]');
+        const formSuccess = document.getElementById('form-success');
+
+        contactForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = this.querySelector('.submit-btn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Sending...';
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: new FormData(this),
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    formSuccess.style.display = 'flex';
+                    formSuccess.classList.remove('fade-out');
+                    this.reset();
+
+                    setTimeout(() => {
+                        formSuccess.classList.add('fade-out');
+                        setTimeout(() => {
+                            formSuccess.style.display = 'none';
+                        }, 500);
+                    }, 3000);
+                } else {
+                    const data = await response.json();
+                    alert(
+                        data.errors
+                        ? data.errors.map(err => err.message).join('\n')
+                        : 'Something went wrong. Please try again.'
+                    );
+                }
+            } catch (error) {
+                alert('Network error. Please check your connection and try again.');
+            } finally {
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
         });
 
         // Mobile Menu Toggle
